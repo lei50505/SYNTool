@@ -12,6 +12,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using SYNTool.Src.Util;
 
 namespace SYNTool
 {
@@ -191,7 +192,8 @@ namespace SYNTool
 
         private void ButtonDelete_Click(object sender, RoutedEventArgs e)
         {
-
+            string s;
+            UConfig.writeAll("", "", "", "",ref s);
         }
 
         private void ButtonStart_Click(object sender, RoutedEventArgs e)
@@ -201,7 +203,7 @@ namespace SYNTool
 
         private void ButtonAbort_Click(object sender, RoutedEventArgs e)
         {
-
+            
         }
 
         private void ButtonStartAll_Click(object sender, RoutedEventArgs e)
