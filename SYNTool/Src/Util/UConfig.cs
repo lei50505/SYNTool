@@ -8,114 +8,44 @@ namespace SYNTool.Src.Util
 {
     public static class UConfig
     {
-        /*
-         * 异常
-         */
-        private static void writeConfig(string name, string value, ref string error)
+        private static void writeConfig(string name, string value)
         {
-            string filePath = null;
-            try
-            {
-                filePath = Directory.GetCurrentDirectory() + "/conf.txt";
-            }
-            catch (Exception ex)
-            {
-                error = ex.Message;
-                return;
-            }
+            string filePath = Directory.GetCurrentDirectory() + "/conf.txt";
             if (!File.Exists(filePath))
             {
-                StreamWriter sw = null;
-                try
-                {
-                    sw = new StreamWriter(filePath);
-                }
-                catch (Exception ex)
-                {
-                    error = ex.Message;
-                    return;
-                }
-                finally
-                {
-                    if (sw != null)
-                    {
-                        sw.Close();
-                    }
-                }
+                StreamWriter sw = new StreamWriter(filePath);
+                sw.Close();
             }
             if (File.Exists(filePath))
             {
                 string[] lines = null;
-                try
-                {
-                    lines = File.ReadAllLines(filePath);
-                }
-                catch (Exception ex)
-                {
-                    error = ex.Message;
-                    return;
-                }
+                lines = File.ReadAllLines(filePath);
                 for (int i = 0; i < lines.Length; i++)
                 {
                     if (lines[i].Split(':')[0] == name)
                     {
                         lines[i] = lines[i].Split(':')[0] + ':' + value;
-                        try
-                        {
-                            File.WriteAllLines(filePath, lines);
-                            return;
-                        }
-                        catch (Exception ex)
-                        {
-                            error = ex.Message;
-                            return;
-                        }
+                        File.WriteAllLines(filePath, lines);
+                        return;
                     }
                 }
                 string[] newLines = new string[lines.Length + 1];
                 for (int i = 0; i < lines.Length; i++)
                 {
                     newLines[i] = lines[i];
-
                 }
                 newLines[lines.Length] = name + ':' + value;
-                try
-                {
-                    File.WriteAllLines(filePath, newLines);
-                    return;
-                }
-                catch (Exception ex)
-                {
-                    error = ex.Message;
-                    return;
-                }
+                File.WriteAllLines(filePath, newLines);
+                return;
             }
         }
 
-        private static string readConfig(string name, ref string error)
+        private static string readConfig(string name)
         {
-            string filePath = null;
-            try
-            {
-                filePath = Directory.GetCurrentDirectory() + "/conf.txt";
-            }
-            catch (Exception ex)
-            {
-                error = ex.Message;
-                return null;
-            }
+            string filePath = Directory.GetCurrentDirectory() + "/conf.txt";
             if (File.Exists(filePath))
             {
-                string[] lines = null;
-                try
-                {
-                    lines = File.ReadAllLines(filePath);
-                }
-                catch (Exception ex)
-                {
-                    error = ex.Message;
-                    return null;
-                }
+                string[] lines = File.ReadAllLines(filePath);
                 for (int i = 0; i < lines.Length; i++)
                 {
                     if (lines[i].Split(':')[0] == name)
@@ -126,61 +56,25 @@ namespace SYNTool.Src.Util
             }
             return null;
         }
-        // 异常:
-        //  Exception
-                //d
-        public static bool writeAll(string comboName, string oldPath, string newPath, string useR, ref string error)
+        public static bool writeAll(string comboName, string oldPath, string newPath)
         {
-            string filePath = null;
-            try
-            {
-                filePath = Directory.GetCurrentDirectory() + "/conf.txt";
-            }
-            catch (Exception ex)
-            {
-                error = ex.Message;
-                return false;
-            }
+            string filePath = Directory.GetCurrentDirectory() + "/conf.txt";
             if (!File.Exists(filePath))
             {
-                StreamWriter sw = null;
-                try
-                {
-                    sw = new StreamWriter(filePath);
-                }
-                catch (Exception ex)
-                {
-                    error = ex.Message;
-                    return false;
-                }
-                finally
-                {
-                    if (sw != null)
-                    {
-                        sw.Close();
-                    }
-                }
+                StreamWriter sw = new StreamWriter(filePath);
+                sw.Close();
             }
             if (File.Exists(filePath))
             {
-                string[] lines = null;
-                try
-                {
-                    lines = File.ReadAllLines(filePath);
-                }
-                catch (Exception ex)
-                {
-                    error = ex.Message;
-                    return false;
-                }
-                for (int i = 0; i < lines.Length; i++)
+                string[] lines = File.ReadAllLines(filePath);
+                for (int i = 0; i < lines.Length; i += 3)
                 {
                     if (lines[i] == "comboName?" + comboName)
                     {
                         return false;
                     }
                 }
-                string[] newLines = new string[lines.Length + 4];
+                string[] newLines = new string[lines.Length + 3];
                 for (int i = 0; i < lines.Length; i++)
                 {
                     newLines[i] = lines[i];
@@ -189,174 +83,89 @@ namespace SYNTool.Src.Util
                 newLines[lines.Length] = "comboName" + '?' + comboName;
                 newLines[lines.Length + 1] = oldPath;
                 newLines[lines.Length + 2] = newPath;
-                newLines[lines.Length + 3] = useR;
-                try
-                {
-                    File.WriteAllLines(filePath, newLines);
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    error = ex.Message;
-                    return false;
-                }
+                File.WriteAllLines(filePath, newLines);
+                return true;
             }
             return false;
         }
-        public static string[] readAll(string comboName, ref string error)
+        public static string[] readAll(string comboName)
         {
             string[] r = null;
-            string filePath = null;
-            try
-            {
-                filePath = Directory.GetCurrentDirectory() + "/conf.txt";
-            }
-            catch (Exception ex)
-            {
-                error = ex.Message;
-                return null;
-            }
+            string filePath = Directory.GetCurrentDirectory() + "/conf.txt";
             if (File.Exists(filePath))
             {
-                string[] lines = null;
-                try
-                {
-                    lines = File.ReadAllLines(filePath);
-                }
-                catch (Exception ex)
-                {
-                    error = ex.Message;
-                    return null;
-                }
-                for (int i = 0; i < lines.Length; i++)
+                string[] lines = File.ReadAllLines(filePath);
+                for (int i = 0; i < lines.Length; i += 3)
                 {
                     if (lines[i] == "comboName?" + comboName)
                     {
-                        r = new string[3];
+                        r = new string[2];
                         r[0] = lines[i + 1];
                         r[1] = lines[i + 2];
-                        r[2] = lines[i + 3];
                         return r;
                     }
                 }
             }
             return null;
         }
-        public static List<string> readComboName(ref string error)
+        public static List<string> readComboName()
         {
             List<string> r = new List<string>();
-            string filePath = null;
-            try
-            {
-                filePath = Directory.GetCurrentDirectory() + "/conf.txt";
-            }
-            catch (Exception ex)
-            {
-                error = ex.Message;
-                return null;
-            }
+            string filePath = Directory.GetCurrentDirectory() + "/conf.txt";
             if (File.Exists(filePath))
             {
-                string[] lines = null;
-                try
-                {
-                    lines = File.ReadAllLines(filePath);
-                }
-                catch (Exception ex)
-                {
-                    error = ex.Message;
-                    return null;
-                }
-                for (int i = 0; i < lines.Length; i = i + 4)
+                string[] lines = File.ReadAllLines(filePath);
+                for (int i = 0; i < lines.Length; i += 3)
                 {
                     string temp = lines[i].Split('?')[1];
                     r.Add(temp);
                 }
             }
             return r;
+
         }
-        public static bool delete(string comboName, ref string error)
+        public static bool delete(string comboName)
         {
-            string filePath = null;
-            try
+            string filePath = Directory.GetCurrentDirectory() + "/conf.txt";
+            if (!File.Exists(filePath))
             {
-                filePath = Directory.GetCurrentDirectory() + "/conf.txt";
-            }
-            catch (Exception ex)
-            {
-                error = ex.Message;
                 return false;
             }
-            if (File.Exists(filePath))
+            string[] lines = File.ReadAllLines(filePath);
+            for (int i = 0; i < lines.Length; i = i + 3)
             {
-                string[] lines = null;
-                try
+                string temp = lines[i].Split('?')[1];
+                if (temp != comboName)
                 {
-                    lines = File.ReadAllLines(filePath);
+                    continue;
                 }
-                catch (Exception ex)
+                if (lines.Length == 3)
                 {
-                    error = ex.Message;
-                    return false;
+                    File.Delete(filePath);
+                    return true;
                 }
-                for (int i = 0; i < lines.Length; i = i + 4)
+                string[] newLines = new string[lines.Length - 3];
+                if (i < lines.Length - 3)
                 {
-                    string temp = lines[i].Split('?')[1];
-                    if (temp == comboName)
+                    for (int ii = 0; ii < i; ii++)
                     {
-                        if (lines.Length == 4)
-                        {
-                            try
-                            {
-                                File.Delete(filePath);
-                                return true;
-                            }
-                            catch (Exception ex)
-                            {
-                                error = ex.Message;
-                                return false;
-                            }
-                        }
-                        string[] newLines = new string[lines.Length - 4];
-                        if (i < lines.Length - 4)
-                        {
-                            for (int ii = 0; ii < i; ii++)
-                            {
-                                newLines[ii] = lines[ii];
-                            }
-                            for (int iii = i; iii < newLines.Length; iii++)
-                            {
-                                newLines[iii] = lines[iii + 4];
-                            }
-                            try
-                            {
-                                File.WriteAllLines(filePath, newLines);
-                                return true;
-                            }
-                            catch (Exception ex)
-                            {
-                                error = ex.Message;
-                                return false;
-                            }
-                        }
-                        else
-                        {
-                            for (int ii = 0; ii < i; ii++)
-                            {
-                                newLines[ii] = lines[ii];
-                            }
-                            try
-                            {
-                                File.WriteAllLines(filePath, newLines);
-                                return true;
-                            }
-                            catch (Exception ex)
-                            {
-                                error = ex.Message;
-                                return false;
-                            }
-                        }
+                        newLines[ii] = lines[ii];
                     }
+                    for (int iii = i; iii < newLines.Length; iii++)
+                    {
+                        newLines[iii] = lines[iii + 3];
+                    }
+                    File.WriteAllLines(filePath, newLines);
+                    return true;
+                }
+                else
+                {
+                    for (int ii = 0; ii < i; ii++)
+                    {
+                        newLines[ii] = lines[ii];
+                    }
+                    File.WriteAllLines(filePath, newLines);
+                    return true;
                 }
             }
             return false;

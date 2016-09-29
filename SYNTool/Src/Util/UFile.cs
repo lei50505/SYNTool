@@ -9,104 +9,89 @@ namespace SYNTool.Src.Util
 {
     public static class UFile
     {
-        public static string getDriverName(string path)
+        public static string GetDriverByPath(string path)
         {
             return path.Substring(0, 1);
         }
-        public static string getLastDir(string path)
+        public static string GetLastDirByDirPath(string dirPath)
         {
             string[] dirs = null;
-            dirs = path.Split('\\');
+            dirs = dirPath.Split('\\');
             return dirs[dirs.Length - 1];
         }
-        private static void getFiles(string path, ref List<string> files)
+        private static void GetSubFilePaths(string rootDirPath, ref List<string> subFilePaths)
         {
-            string[] fs = Directory.GetFiles(path);
+            string[] fs = Directory.GetFiles(rootDirPath);
             foreach (string f in fs)
             {
-                files.Add(f);
+                subFilePaths.Add(f);
             }
-            string[] ds = Directory.GetDirectories(path);
+            string[] ds = Directory.GetDirectories(rootDirPath);
             foreach (string d in ds)
             {
-                getFiles(d, ref files);
+                GetSubFilePaths(d, ref subFilePaths);
             }
         }
-        public static List<string> getFiles(string path)
+        public static List<string> GetSubFilePaths(List<string> rootDirPaths)
         {
-            List<string> files = new List<string>();
-            List<string> referrors = new List<string>();
-            getFiles(path, ref files);
-            return files;
+            List<string> subFilePaths = new List<string>();
+            foreach (string rootDirPath in rootDirPaths)
+            {
+                GetSubFilePaths(rootDirPath, ref subFilePaths);
+            }
+            return subFilePaths;
         }
-        private static void getDirs(string path, ref List<string> dirs)
+        public static List<string> GetSubFilePaths(string rootDirPath)
         {
-            string[] ds = Directory.GetDirectories(path);
+            List<string> subFilePaths = new List<string>();
+            GetSubFilePaths(rootDirPath, ref subFilePaths);
+            return subFilePaths;
+        }
+        private static void GetDirPaths(string dirPath, ref List<string> dirPaths)
+        {
+            string[] ds = Directory.GetDirectories(dirPath);
             foreach (string d in ds)
             {
-                getDirs(d, ref dirs);
-                dirs.Add(d);
+                GetDirPaths(d, ref dirPaths);
+                dirPaths.Add(d);
             }
         }
-        public static List<string> getDirs(string path)
+        public static List<string> GetSubDirPaths(List<string> rootDirPaths)
         {
-            List<string> dirs = new List<string>();
-            List<string> referrors = new List<string>();
-            getDirs(path, ref dirs);
-
-            return dirs;
-        }
-        public static bool copyDir(string oldDir, string oldPath, string newPath)
-        {
-            string newDir = newPath + oldDir.Substring(oldPath.Length);
-            if (!Directory.Exists(newDir))
+            List<string> subDirPaths = new List<string>();
+            foreach (string rootDirPath in rootDirPaths)
             {
-                Directory.CreateDirectory(newDir);
+                GetDirPaths(rootDirPath, ref subDirPaths);
+            }
+            return subDirPaths;
+        }
+        public static List<string> GetSubDirPaths(string rootDirPath)
+        {
+            List<string> subDirPaths = new List<string>();
+            GetDirPaths(rootDirPath, ref subDirPaths);
+            return subDirPaths;
+        }
+        public static bool CopyDir(string oldDirPath, string oldRootPath, string newRootPath)
+        {
+            string newDirPath = newRootPath + oldDirPath.Substring(oldRootPath.Length);
+            if (!Directory.Exists(newDirPath))
+            {
+                Directory.CreateDirectory(newDirPath);
                 return true;
             }
             return false;
         }
-        private static bool compareFiles(string oldFile, string newFile)
+        private static bool FilesLastWriteTimeEqual(string oldFile, string newFile)
         {
-            int oldYear = File.GetLastWriteTime(oldFile).Year;
-            int newYear = File.GetLastWriteTime(newFile).Year;
-            int oldMonth = File.GetLastWriteTime(oldFile).Month;
-            int newMonth = File.GetLastWriteTime(newFile).Month;
-            int oldDay = File.GetLastWriteTime(oldFile).Day;
-            int newDay = File.GetLastWriteTime(newFile).Day;
-            int oldHour = File.GetLastWriteTime(oldFile).Hour;
-            int newHour = File.GetLastWriteTime(newFile).Hour;
-            int oldMinute = File.GetLastWriteTime(oldFile).Minute;
-            int newMinute = File.GetLastWriteTime(newFile).Minute;
-            int oldSecond = File.GetLastWriteTime(oldFile).Second;
-            int newSecond = File.GetLastWriteTime(newFile).Second;
-            int oldTime = oldSecond + (oldMinute * 60) + (oldHour * 60 * 60) + (oldDay * 24 * 60 * 60);
-            int newTime = newSecond + (newMinute * 60) + (newHour * 60 * 60) + (newDay * 24 * 60 * 60);
-            int time = oldTime - newTime;
-            if (oldYear == newYear)
-            {
-                if (oldMonth == newMonth)
-                {
-                    if (time > -5 && time < 5)
-                    {
-                        return true;
-                    }
-                    else
-                    {
-                        return false;
-                    }
-                }
-                else
-                {
-                    return false;
-                }
-            }
-            else
+            long oldSeconds = File.GetLastWriteTime(oldFile).Ticks/10000000L;
+            long newSeconds = File.GetLastWriteTime(newFile).Ticks/10000000L;
+            if (oldSeconds - newSeconds > 5L || oldSeconds - newSeconds < -5L )
             {
                 return false;
             }
+            return true;
         }
-        private static long getFileSize(string file)
+        private static long GetFileBytes(string file)
         {
             long fileSize = 0;
             FileInfo fileInfo = new FileInfo(file);
@@ -114,42 +99,41 @@ namespace SYNTool.Src.Util
             return fileSize;
         }
 
-        public static bool copyFile(string oldFile, string oldPath, string newPath, ref List<string> errors)
+        public static bool CopyFile(string oldFilePath, string oldRootDirPath, string newRootDirPath)
         {
-            string newFile = newPath + oldFile.Substring(oldPath.Length);
-            if (File.Exists(newFile))
+            string newFilePath = newRootDirPath + oldFilePath.Substring(oldRootDirPath.Length);
+            if (File.Exists(newFilePath))
             {
-                if (!(compareFiles(oldFile, newFile) && getFileSize(oldFile) == getFileSize(newFile)))
+                if (!(FilesLastWriteTimeEqual(oldFilePath, newFilePath) && GetFileBytes(oldFilePath) == GetFileBytes(newFilePath)))
                 {
-                    FileSystem.DeleteFile(newFile, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin);
-                    File.Copy(oldFile, newFile, true);
+                    FileSystem.DeleteFile(newFilePath, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin);
+                    File.Copy(oldFilePath, newFilePath, true);
                     return true;
                 }
             }
             else
             {
-                File.Copy(oldFile, newFile, true);
+                File.Copy(oldFilePath, newFilePath, true);
                 return true;
             }
             return false;
         }
-        public static bool delFile(string newFile, string oldPath, string newPath, ref List<string> errors)
+        public static bool DelFile(string newFilePath, string oldRootDirPath, string newRootDirPath)
         {
-            string oldFile = oldPath + newFile.Substring(newPath.Length);
-            if (!File.Exists(oldFile))
+            string oldFilePath = oldRootDirPath + newFilePath.Substring(newRootDirPath.Length);
+            if (!File.Exists(oldFilePath))
             {
-                FileSystem.DeleteFile(newFile, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin);
-                File.Delete(newFile);
+                FileSystem.DeleteFile(newFilePath, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin);
                 return true;
             }
             return false;
         }
-        public static bool delDir(string newDir, string oldPath, string newPath, ref List<string> errors)
+        public static bool DelDir(string newDirPath, string oldRootDirPath, string newRootDirPath)
         {
-            string oldDir = oldPath + newDir.Substring(newPath.Length);
-            if (!Directory.Exists(oldDir))
+            string oldDirPath = oldRootDirPath + newDirPath.Substring(newRootDirPath.Length);
+            if (!Directory.Exists(oldDirPath))
             {
-                FileSystem.DeleteDirectory(newDir, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin);
+                FileSystem.DeleteDirectory(newDirPath, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin);
                 return true;
             }
             return false;
