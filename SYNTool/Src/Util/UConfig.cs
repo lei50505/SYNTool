@@ -108,6 +108,15 @@ namespace SYNTool.Src.Util
             }
             return null;
         }
+        public static string[] GetAllLines()
+        {
+            string filePath = Directory.GetCurrentDirectory() + "/conf.txt";
+            if (File.Exists(filePath))
+            {
+                return File.ReadAllLines(filePath);
+            }
+            return null;
+        }
         public static List<string> readComboName()
         {
             List<string> r = new List<string>();

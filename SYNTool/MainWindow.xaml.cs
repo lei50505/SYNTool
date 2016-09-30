@@ -182,6 +182,19 @@ namespace SYNTool
                 ListBoxHistory.ScrollIntoView(ListBoxHistory.SelectedItem);
             }
         }
+        private delegate void ListBoxHistoryItemsClearGate();
+        private void ListBoxHistoryItemsClear()
+        {
+            if (ListBoxHistory.Dispatcher.Thread != Thread.CurrentThread)
+            {
+                ListBoxHistoryItemsClearGate gate = new ListBoxHistoryItemsClearGate(ListBoxHistoryItemsClear);
+                Dispatcher.Invoke(gate, new object[] {  });
+            }
+            else
+            {
+                ListBoxHistory.Items.Clear();
+            }
+        }
 
         private delegate void LabelHistoryContentGate(string content);
         private void LabelHistoryContent(string content)
@@ -283,6 +296,10 @@ namespace SYNTool
         private Thread threadStart = null;
         private void threadStartImpl()
         {
+
+            ListBoxHistoryItemsClear();
+            LabelHistoryContent("准备就绪");
+
             threadStartIsAbort = false;
             //设置控件开始状态
             TextBoxOldIsEnabled(false);
@@ -578,13 +595,6 @@ namespace SYNTool
             }
             ListBoxHistoryItemsAdd("已存在");
         }
-        private string comboName = "";
-
-        private string[] configs = null;
-        private void readConfigs()
-        {
-            configs = UConfig.readAll(comboName);
-        }
 
 
         private void ButtonDelete_Click(object sender, RoutedEventArgs e)
@@ -616,7 +626,7 @@ namespace SYNTool
 
         private void ButtonStart_Click(object sender, RoutedEventArgs e)
         {
-            ListBoxHistory.Items.Clear();
+            ListBoxHistoryItemsClear();
             LabelHistoryContent("准备就绪");
 
             if (TextBoxOld.Text.Equals("") || TextBoxNew.Text.Equals(""))
@@ -677,10 +687,218 @@ namespace SYNTool
 
         private void ButtonStartAll_Click(object sender, RoutedEventArgs e)
         {
-
+            Thread t = new Thread(threadStartAllImpl);
+            t.IsBackground = true;
+            t.Start();
         }
 
+        private void threadStartAllImpl()
+        {
+            ListBoxHistoryItemsClear();
+            LabelHistoryContent("准备就绪");
 
+
+            threadStartIsAbort = false;
+            //设置控件开始状态
+            TextBoxOldIsEnabled(false);
+            TextBoxNewIsEnabled(false);
+            ComboBoxSaveIsEnabled(false);
+            ButtonOldIsEnabled(false);
+            ButtonNewIsEnabled(false);
+            ButtonDeleteIsEnabled(false);
+            ButtonSaveIsEnabled(false);
+            ButtonStartAllIsEnabled(false);
+            ButtonStartIsEnabled(false);
+            ButtonAbortIsEnabled(true);
+
+            ProgressBarStartMaximumAndValue(100, 0);
+
+            int progressBarStartMaximum = 0;
+            int progressBarStartValue = 0;
+
+
+            string[] lines = UConfig.GetAllLines();
+            if (lines == null || lines.Length %3 != 0)
+            {
+                //设置完成状态
+                TextBoxOldIsEnabled(true);
+                TextBoxNewIsEnabled(true);
+                ComboBoxSaveIsEnabled(true);
+                ButtonOldIsEnabled(true);
+                ButtonNewIsEnabled(true);
+                ButtonDeleteIsEnabled(true);
+                ButtonSaveIsEnabled(true);
+                ButtonStartAllIsEnabled(true);
+                ButtonStartIsEnabled(true);
+                ButtonAbortIsEnabled(false);
+                return;
+            }
+            int index = 0;
+            for (int i = 0; i < lines.Length; i+=3)
+            {
+                index++;
+                ListBoxHistoryItemsAdd("("+index+"/"+lines.Length/3+")正在处理："+lines[i]);
+                LabelHistoryContent("("+index+"/"+lines.Length/3+")正在处理："+lines[i]);
+                string oldRootDirPath = lines[i + 1];
+                string newRootDirPath = lines[i + 2];
+
+                if (!(Directory.Exists(oldRootDirPath) && Directory.Exists(newRootDirPath)))
+                {
+                    ListBoxHistoryItemsAdd("文件夹不存在");
+                    LabelHistoryContent("文件夹不存在");
+                    continue;
+                }
+
+                List<string> oldSubFilePaths = UFile.GetSubFilePaths(oldRootDirPath);
+                List<string> newSubFilePaths = UFile.GetSubFilePaths(newRootDirPath);
+                List<string> oldSubDirPaths = UFile.GetSubDirPaths(oldRootDirPath);
+                List<string> newSubDirPaths = UFile.GetSubDirPaths(newRootDirPath);
+
+                progressBarStartMaximum = oldSubDirPaths.Count;
+                progressBarStartValue = 0;
+
+                ListBoxHistoryItemsAdd("(1/4)正在复制文件夹");
+                LabelHistoryContent("(1/4)正在复制文件夹");
+
+                foreach (string oldSubDirPath in oldSubDirPaths)
+                {
+                    if (UFile.CopyDir(oldSubDirPath, oldRootDirPath, newRootDirPath))
+                    {
+                        ListBoxHistoryItemsAdd("(1/4)正在复制文件夹：" + oldSubDirPath);
+                        LabelHistoryContent("(1/4)正在复制文件夹：" + oldSubDirPath);
+                    }
+                    progressBarStartValue++;
+                    ProgressBarStartMaximumAndValue(progressBarStartMaximum, progressBarStartValue);
+                    if (threadStartIsAbort == true)
+                    {
+                        ListBoxHistoryItemsAdd("用户手动中止操作");
+                        LabelHistoryContent("用户手动中止操作");
+                        TextBoxOldIsEnabled(true);
+                        TextBoxNewIsEnabled(true);
+                        ComboBoxSaveIsEnabled(true);
+                        ButtonOldIsEnabled(true);
+                        ButtonNewIsEnabled(true);
+                        ButtonDeleteIsEnabled(true);
+                        ButtonSaveIsEnabled(true);
+                        ButtonStartAllIsEnabled(true);
+                        ButtonStartIsEnabled(true);
+                        ButtonAbortIsEnabled(false);
+                        return;
+                    }
+                }
+
+                progressBarStartMaximum = oldSubFilePaths.Count;
+                progressBarStartValue = 0;
+                ListBoxHistoryItemsAdd("(2/4)正在复制文件");
+                LabelHistoryContent("(2/4)正在复制文件");
+                foreach (string oldSubFilePath in oldSubFilePaths)
+                {
+                    if (UFile.CopyFile(oldSubFilePath, oldRootDirPath, newRootDirPath))
+                    {
+                        ListBoxHistoryItemsAdd("(2/4)正在复制文件：" + oldSubFilePath);
+                        LabelHistoryContent("(2/4)正在复制文件：" + oldSubFilePath);
+                    }
+                    progressBarStartValue++;
+                    ProgressBarStartMaximumAndValue(progressBarStartMaximum, progressBarStartValue);
+                    if (threadStartIsAbort == true)
+                    {
+                        ListBoxHistoryItemsAdd("用户手动中止操作");
+                        LabelHistoryContent("用户手动中止操作");
+                        TextBoxOldIsEnabled(true);
+                        TextBoxNewIsEnabled(true);
+                        ComboBoxSaveIsEnabled(true);
+                        ButtonOldIsEnabled(true);
+                        ButtonNewIsEnabled(true);
+                        ButtonDeleteIsEnabled(true);
+                        ButtonSaveIsEnabled(true);
+                        ButtonStartAllIsEnabled(true);
+                        ButtonStartIsEnabled(true);
+                        ButtonAbortIsEnabled(false);
+                        return;
+                    }
+                }
+
+                //删除在newFiles里不在oldFiles里的File
+                progressBarStartMaximum = newSubFilePaths.Count;
+                progressBarStartValue = 0;
+                ListBoxHistoryItemsAdd("(3/4)正在删除文件");
+                LabelHistoryContent("(3/4)正在删除文件");
+                foreach (string newSubFilePath in newSubFilePaths)
+                {
+                    if (UFile.DelFile(newSubFilePath, oldRootDirPath, newRootDirPath))
+                    {
+                        ListBoxHistoryItemsAdd("(3/4)正在删除文件：" + newSubFilePath);
+                        LabelHistoryContent("(3/4)正在删除文件：" + newSubFilePath);
+                    }
+                    progressBarStartValue++;
+                    ProgressBarStartMaximumAndValue(progressBarStartMaximum, progressBarStartValue);
+                    if (threadStartIsAbort == true)
+                    {
+                        ListBoxHistoryItemsAdd("用户手动中止操作");
+                        LabelHistoryContent("用户手动中止操作");
+                        TextBoxOldIsEnabled(true);
+                        TextBoxNewIsEnabled(true);
+                        ComboBoxSaveIsEnabled(true);
+                        ButtonOldIsEnabled(true);
+                        ButtonNewIsEnabled(true);
+                        ButtonDeleteIsEnabled(true);
+                        ButtonSaveIsEnabled(true);
+                        ButtonStartAllIsEnabled(true);
+                        ButtonStartIsEnabled(true);
+                        ButtonAbortIsEnabled(false);
+                        return;
+                    }
+                }
+
+                progressBarStartMaximum = newSubDirPaths.Count;
+                progressBarStartValue = 0;
+                //删除在newDirs里不在oldDirs里的Dir
+                ListBoxHistoryItemsAdd("(4/4)正在删除文件夹");
+                LabelHistoryContent("(4/4)正在删除文件夹");
+                foreach (string newSubDirPath in newSubDirPaths)
+                {
+                    if (UFile.DelDir(newSubDirPath, oldRootDirPath, newRootDirPath))
+                    {
+                        ListBoxHistoryItemsAdd("(4/4)正在删除文件夹：" + newSubDirPath);
+                        LabelHistoryContent("(4/4)正在删除文件夹：" + newSubDirPath);
+                    }
+                    progressBarStartValue++;
+                    ProgressBarStartMaximumAndValue(progressBarStartMaximum, progressBarStartValue);
+                    if (threadStartIsAbort == true)
+                    {
+                        ListBoxHistoryItemsAdd("用户手动中止操作");
+                        LabelHistoryContent("用户手动中止操作");
+                        TextBoxOldIsEnabled(true);
+                        TextBoxNewIsEnabled(true);
+                        ComboBoxSaveIsEnabled(true);
+                        ButtonOldIsEnabled(true);
+                        ButtonNewIsEnabled(true);
+                        ButtonDeleteIsEnabled(true);
+                        ButtonSaveIsEnabled(true);
+                        ButtonStartAllIsEnabled(true);
+                        ButtonStartIsEnabled(true);
+                        ButtonAbortIsEnabled(false);
+                        return;
+                    }
+                }
+                ProgressBarStartMaximumAndValue(100, 100);
+                ListBoxHistoryItemsAdd("(" + index + "/" + lines.Length / 3 + ")处理完成：" + lines[i]);
+                LabelHistoryContent("(" + index + "/" + lines.Length / 3 + ")处理完成：" + lines[i]);
+            }
+
+            
+            //设置完成状态
+            TextBoxOldIsEnabled(true);
+            TextBoxNewIsEnabled(true);
+            ComboBoxSaveIsEnabled(true);
+            ButtonOldIsEnabled(true);
+            ButtonNewIsEnabled(true);
+            ButtonDeleteIsEnabled(true);
+            ButtonSaveIsEnabled(true);
+            ButtonStartAllIsEnabled(true);
+            ButtonStartIsEnabled(true);
+            ButtonAbortIsEnabled(false);
+        }
 
     }
 }
