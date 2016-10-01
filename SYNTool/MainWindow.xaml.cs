@@ -694,12 +694,11 @@ namespace SYNTool
 
         private void threadStartAllImpl()
         {
+            threadStartIsAbort = false;
+
+            //设置控件开始状态
             ListBoxHistoryItemsClear();
             LabelHistoryContent("准备就绪");
-
-
-            threadStartIsAbort = false;
-            //设置控件开始状态
             TextBoxOldIsEnabled(false);
             TextBoxNewIsEnabled(false);
             ComboBoxSaveIsEnabled(false);
@@ -710,7 +709,6 @@ namespace SYNTool
             ButtonStartAllIsEnabled(false);
             ButtonStartIsEnabled(false);
             ButtonAbortIsEnabled(true);
-
             ProgressBarStartMaximumAndValue(100, 0);
 
             int progressBarStartMaximum = 0;
