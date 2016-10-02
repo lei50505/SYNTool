@@ -292,16 +292,15 @@ namespace SYNTool
         private string oldRootDirPath;
         private string newRootDirPath;
 
-        private bool threadStartIsAbort = false;
         private Thread threadStart = null;
         private void threadStartImpl()
         {
 
+            threadIsAbort = false;
+
+            //设置控件开始状态
             ListBoxHistoryItemsClear();
             LabelHistoryContent("准备就绪");
-
-            threadStartIsAbort = false;
-            //设置控件开始状态
             TextBoxOldIsEnabled(false);
             TextBoxNewIsEnabled(false);
             ComboBoxSaveIsEnabled(false);
@@ -312,6 +311,7 @@ namespace SYNTool
             ButtonStartAllIsEnabled(false);
             ButtonStartIsEnabled(false);
             ButtonAbortIsEnabled(true);
+            ProgressBarStartMaximumAndValue(100, 0);
 
             int progressBarStartMaximum = 0;
             int progressBarStartValue = 0;
@@ -336,7 +336,7 @@ namespace SYNTool
                 }
                 progressBarStartValue++;
                 ProgressBarStartMaximumAndValue(progressBarStartMaximum, progressBarStartValue);
-                if (threadStartIsAbort == true)
+                if (threadIsAbort == true)
                 {
                     ListBoxHistoryItemsAdd("用户手动中止操作");
                     LabelHistoryContent("用户手动中止操作");
@@ -367,7 +367,7 @@ namespace SYNTool
                 }
                 progressBarStartValue++;
                 ProgressBarStartMaximumAndValue(progressBarStartMaximum, progressBarStartValue);
-                if (threadStartIsAbort == true)
+                if (threadIsAbort == true)
                 {
                     ListBoxHistoryItemsAdd("用户手动中止操作");
                     LabelHistoryContent("用户手动中止操作");
@@ -399,7 +399,7 @@ namespace SYNTool
                 }
                 progressBarStartValue++;
                 ProgressBarStartMaximumAndValue(progressBarStartMaximum, progressBarStartValue);
-                if (threadStartIsAbort == true)
+                if (threadIsAbort == true)
                 {
                     ListBoxHistoryItemsAdd("用户手动中止操作");
                     LabelHistoryContent("用户手动中止操作");
@@ -431,7 +431,7 @@ namespace SYNTool
                 }
                 progressBarStartValue++;
                 ProgressBarStartMaximumAndValue(progressBarStartMaximum, progressBarStartValue);
-                if (threadStartIsAbort == true)
+                if (threadIsAbort == true)
                 {
                     ListBoxHistoryItemsAdd("用户手动中止操作");
                     LabelHistoryContent("用户手动中止操作");
@@ -448,8 +448,9 @@ namespace SYNTool
                     return;
                 }
             }
-            ProgressBarStartMaximumAndValue(100, 100);
             //设置完成状态
+            ListBoxHistoryItemsAdd("操作完成");
+            LabelHistoryContent("操作完成");
             TextBoxOldIsEnabled(true);
             TextBoxNewIsEnabled(true);
             ComboBoxSaveIsEnabled(true);
@@ -460,6 +461,8 @@ namespace SYNTool
             ButtonStartAllIsEnabled(true);
             ButtonStartIsEnabled(true);
             ButtonAbortIsEnabled(false);
+            ProgressBarStartMaximumAndValue(100, 100);
+
         }
         public MainWindow()
         {
@@ -539,6 +542,7 @@ namespace SYNTool
         {
             ListBoxHistory.Items.Clear();
             LabelHistoryContent("准备就绪");
+            ProgressBarStartMaximumAndValue(100, 0);
 
             if (TextBoxOld.Text.Equals("") || TextBoxNew.Text.Equals(""))
             {
@@ -601,6 +605,7 @@ namespace SYNTool
         {
             ListBoxHistory.Items.Clear();
             LabelHistoryContent("准备就绪");
+            ProgressBarStartMaximumAndValue(100, 0);
 
             if (ComboBoxSave.Items.Count == 0)
             {
@@ -628,6 +633,7 @@ namespace SYNTool
         {
             ListBoxHistoryItemsClear();
             LabelHistoryContent("准备就绪");
+            ProgressBarStartMaximumAndValue(100, 0);
 
             if (TextBoxOld.Text.Equals("") || TextBoxNew.Text.Equals(""))
             {
@@ -672,21 +678,29 @@ namespace SYNTool
                 return;
             }
 
-            ProgressBarStart.Value = 0;
             threadStart = new Thread(threadStartImpl);
             threadStart.IsBackground = true;
             threadStart.Start();
 
         }
 
+        private bool threadIsAbort = false;
         private void ButtonAbort_Click(object sender, RoutedEventArgs e)
         {
             ButtonAbortIsEnabled(false);
-            threadStartIsAbort = true;
+            threadIsAbort = true;
         }
 
         private void ButtonStartAll_Click(object sender, RoutedEventArgs e)
         {
+            ListBoxHistory.Items.Clear();
+            LabelHistoryContent("准备就绪");
+            ProgressBarStartMaximumAndValue(100, 0);
+            MessageBoxResult result = System.Windows.MessageBox.Show("是否开始同步?", "警告", MessageBoxButton.OKCancel, MessageBoxImage.Warning);
+            if (result != MessageBoxResult.OK)
+            {
+                return;
+            }
             Thread t = new Thread(threadStartAllImpl);
             t.IsBackground = true;
             t.Start();
@@ -694,7 +708,7 @@ namespace SYNTool
 
         private void threadStartAllImpl()
         {
-            threadStartIsAbort = false;
+            threadIsAbort = false;
 
             //设置控件开始状态
             ListBoxHistoryItemsClear();
@@ -714,11 +728,12 @@ namespace SYNTool
             int progressBarStartMaximum = 0;
             int progressBarStartValue = 0;
 
-
             string[] lines = UConfig.GetAllLines();
             if (lines == null || lines.Length %3 != 0)
             {
                 //设置完成状态
+                ListBoxHistoryItemsAdd("配置文件不存在");
+                LabelHistoryContent("配置文件不存在");
                 TextBoxOldIsEnabled(true);
                 TextBoxNewIsEnabled(true);
                 ComboBoxSaveIsEnabled(true);
@@ -735,8 +750,12 @@ namespace SYNTool
             for (int i = 0; i < lines.Length; i+=3)
             {
                 index++;
-                ListBoxHistoryItemsAdd("("+index+"/"+lines.Length/3+")正在处理："+lines[i]);
-                LabelHistoryContent("("+index+"/"+lines.Length/3+")正在处理："+lines[i]);
+
+                string lineName = lines[i].Split('?')[1];
+
+                ListBoxHistoryItemsAdd("("+index+"/"+lines.Length/3+")正在处理："+lineName);
+                LabelHistoryContent("(" + index + "/" + lines.Length / 3 + ")正在处理：" + lineName);
+
                 string oldRootDirPath = lines[i + 1];
                 string newRootDirPath = lines[i + 2];
 
@@ -767,7 +786,7 @@ namespace SYNTool
                     }
                     progressBarStartValue++;
                     ProgressBarStartMaximumAndValue(progressBarStartMaximum, progressBarStartValue);
-                    if (threadStartIsAbort == true)
+                    if (threadIsAbort == true)
                     {
                         ListBoxHistoryItemsAdd("用户手动中止操作");
                         LabelHistoryContent("用户手动中止操作");
@@ -798,7 +817,7 @@ namespace SYNTool
                     }
                     progressBarStartValue++;
                     ProgressBarStartMaximumAndValue(progressBarStartMaximum, progressBarStartValue);
-                    if (threadStartIsAbort == true)
+                    if (threadIsAbort == true)
                     {
                         ListBoxHistoryItemsAdd("用户手动中止操作");
                         LabelHistoryContent("用户手动中止操作");
@@ -830,7 +849,7 @@ namespace SYNTool
                     }
                     progressBarStartValue++;
                     ProgressBarStartMaximumAndValue(progressBarStartMaximum, progressBarStartValue);
-                    if (threadStartIsAbort == true)
+                    if (threadIsAbort == true)
                     {
                         ListBoxHistoryItemsAdd("用户手动中止操作");
                         LabelHistoryContent("用户手动中止操作");
@@ -862,7 +881,7 @@ namespace SYNTool
                     }
                     progressBarStartValue++;
                     ProgressBarStartMaximumAndValue(progressBarStartMaximum, progressBarStartValue);
-                    if (threadStartIsAbort == true)
+                    if (threadIsAbort == true)
                     {
                         ListBoxHistoryItemsAdd("用户手动中止操作");
                         LabelHistoryContent("用户手动中止操作");
@@ -879,13 +898,15 @@ namespace SYNTool
                         return;
                     }
                 }
-                ProgressBarStartMaximumAndValue(100, 100);
-                ListBoxHistoryItemsAdd("(" + index + "/" + lines.Length / 3 + ")处理完成：" + lines[i]);
-                LabelHistoryContent("(" + index + "/" + lines.Length / 3 + ")处理完成：" + lines[i]);
+
+                ListBoxHistoryItemsAdd("(" + index + "/" + lines.Length / 3 + ")处理完成：" + lineName);
+                LabelHistoryContent("(" + index + "/" + lines.Length / 3 + ")处理完成：" + lineName);
             }
 
             
             //设置完成状态
+            ListBoxHistoryItemsAdd("操作完成");
+            LabelHistoryContent("操作完成");
             TextBoxOldIsEnabled(true);
             TextBoxNewIsEnabled(true);
             ComboBoxSaveIsEnabled(true);
@@ -896,6 +917,8 @@ namespace SYNTool
             ButtonStartAllIsEnabled(true);
             ButtonStartIsEnabled(true);
             ButtonAbortIsEnabled(false);
+            ProgressBarStartMaximumAndValue(100, 100);
+
         }
 
     }
